@@ -1,0 +1,332 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# pywebfontkit v0.1 
+# Author: Mahdi Ghane.G
+
+import sys
+import os
+import fontforge
+import cgi
+import tempfile
+import argparse
+import __future__
+
+
+class pywebfontkit:
+    def __init__(self, font_name, kerning=15):
+        self.svg_dir = ''
+        self.svg_files = []
+        self.ttf_path = ''
+        self.char_map = {}
+        self.char_index = 350
+        self.fontforge = fontforge.font()
+        self.fontforge.encoding = 'UnicodeFull'
+        self.fontforge.design_size = 16
+        self.fontforge.em = 512
+        self.fontforge.ascent = 448
+        self.fontforge.descent = 64
+        self.fontforge.fontname = font_name
+        self.fontforge.familyname = font_name
+        self.fontforge.fullname = font_name
+        self.fontforge_cache = ''
+        self.kerning = kerning
+        
+
+    def load_svg_dir(self, path):
+        self.svg_dir = path
+        for f in os.listdir(self.svg_dir):
+            if os.path.isfile(os.path.join(self.svg_dir , f)):
+                filename = os.path.splitext(f)[0]
+                self.svg_files.append(filename)
+        
+
+    def char_add(self, svg_file, glyph_name):
+        glyph = self.fontforge.createChar(self.char_index)
+
+        # hack removal of <switch> </switch> tags
+        svgfile = open(svg_file, 'r+')
+        tmpsvgfile = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
+        svgtext = svgfile.read()
+        svgfile.seek(0)
+
+        # replace the <switch> </switch> tags with 'nothing'
+        svgtext = svgtext.replace('<switch>', '')
+        svgtext = svgtext.replace('</switch>', '')
+
+        tmpsvgfile.file.write(str.encode(svgtext))
+
+        svgfile.close()
+        tmpsvgfile.file.close()
+
+        svg_file = tmpsvgfile.name
+        # end hack
+
+
+        # import the svg file
+        glyph.importOutlines(svg_file)
+
+        # remove temp
+        os.unlink(tmpsvgfile.name)
+
+        # set the margins to the vectorial image
+        #glyph.left_side_bearing = self.kerning
+        #glyph.right_side_bearing = self.kerning
+
+        # set glyph size explicitly or automatically depending on autowidth
+        glyph.left_side_bearing = 0
+        glyph.right_side_bearing = 0
+        glyph.round()
+
+        self.char_map[self.char_index]=glyph_name
+        self.char_index += 1
+       
+        
+    def char_collect(self):
+        print("Start collecting glyphs...")
+        for idx, glyph in enumerate(self.svg_files):
+            print("Add %s glyph..." % glyph)
+            svg_path = os.path.join(self.svg_dir, glyph+'.svg')
+            self.char_add(svg_path, glyph)
+        # resize glyphs [autowidth]
+        self.fontforge.autoWidth(0, 0, 512)
+
+
+    def save_html(self, html_path, glyph_prefix, font_name):
+        self.html_path = html_path
+        template = '''
+        <div class="item">
+            <p class="glyph"><i class="@prefix@ @classname@"></i></p>
+            <p class="css-class">@classname@</p>
+            <div class="char-info">
+                <div class="htmlchar"><code>@htmlchar@</code></div>
+                <div class="char">@char@</div>
+            </div>
+        </div>'''
+        template_res = '''
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+                <link href="./css/@fontname@.css" rel="stylesheet" type="text/css" />
+                <title>@fontname@ cheatsheet</title>
+                <style>
+                    body{
+                        background: #FAFAFA;
+                        text-align: center;
+                    }
+                    .item{
+                        display: inline-block;
+                        margin: 5px 5px;
+                        width: 150px;
+                        height: 200px;
+                        vertical-align: top;
+                        text-align: center;
+                        background-color: #fff;
+                        box-shadow: 0 1px 2px 0px rgba(0, 0, 0, 0.16),0 0px 0px 1px rgba(0, 0, 0, 0.02);
+                        border-radius: 2px;
+                        position: relative;
+                    }
+
+                    .item .glyph{
+                        font-size: 42px;
+                        color: #000;
+                        display: block;
+                        height: 80px;
+                        overflow: hidden;
+                        margin: 0;
+                        line-height: 78px;
+                    }
+                    .item .css-class{
+                        font-size: 12px;
+                        display: inline;
+                        padding: 5px 6px;
+                    }
+                    .item .char-info{
+                        position: absolute;
+                        bottom:0;
+                        left:0;
+                        right:0;
+                        height: 62px;
+                    }
+                    .item .char-info .char, .item .char-info .htmlchar{
+                        font-size: 18px;
+                        background-color: #ccc;
+                        display: inline-block;
+                        padding: 5px;
+                        margin: 1px;
+                        border-radius: 3px
+                    }
+
+                    .item .char-info .htmlchar{
+                        font-size: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>@fontname@ cheatsheet</h1>
+                <div style="width: 100%;border-top: 1px solid rgb(237, 237, 237);display:inline-block;margin: 0 auto 25px auto;clear:both"></div>
+                @content@
+            </body>
+        </html>
+        '''
+        res = ''
+        
+        for x in self.char_map:
+            tmpres = template.replace("@classname@",glyph_prefix +'-'+ self.char_map[x])
+            tmpres = tmpres.replace("@prefix@",glyph_prefix)
+            char = chr(x)
+            htmlchar = ['&#%d;' % ord(x) for x in char][0]
+            htmlchar = cgi.escape(htmlchar)
+            tmpres = tmpres.replace("@char@", char )
+            tmpres = tmpres.replace("@htmlchar@", str(htmlchar) )
+            res = res + tmpres
+        template_res = template_res.replace("@content@", res)
+        res = template_res.replace("@fontname@", font_name)
+        file = open(self.html_path,encoding='utf-8', mode="w")
+        file.write(res)
+        file.close()
+
+
+    def save_css(self, css_path, glyph_prefix, font_name):
+        print("Build CSS...")
+        self.css_path = css_path
+        template = '.@classname@:before{content: "@char@"}'
+        res = '''@font-face { font-family: "@fontname@"; src: url("../fonts/@fontname@.eot?v=2.0.1"); src: url("../fonts/@fontname@.eot?v=2.0.1#iefix") format("embedded-opentype"), url("../fonts/@fontname@.ttf?v=2.0.1") format("truetype"), url("../fonts/@fontname@.woff?v=2.0.1") format("woff"), url("../fonts/@fontname@.svg?v=2.0.1#Ionicons") format("svg"); font-weight: normal; font-style: normal; }
+        .@prefix@:before,.@prefix@{ display: inline-block; font-family: "@fontname@"; speak: none; font-style: normal; font-weight: normal; font-variant: normal; text-transform: none; text-rendering: auto; line-height: 1; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        '''
+        for x in self.char_map:
+            tmpres = template.replace("@classname@",glyph_prefix +'-'+ self.char_map[x])
+            res = res + tmpres.replace("@char@", chr(x))
+        res = res.replace("@prefix@", glyph_prefix)
+        res = res.replace("@fontname@", font_name)
+        file = open(self.css_path,encoding='utf-8', mode="w")
+        file.write(res)
+        file.close()
+
+
+    def save_ttf(self, ttf_path):
+        print("Build TTF...")
+        self.ttf_path = ttf_path
+        self.fontforge.generate(self.ttf_path)
+        self.fontforge_cache = fontforge.open(self.ttf_path)
+        self.optimize_glyphs(self.fontforge_cache)
+
+    def save_otf(self, otf_path):
+        print("Build OTF...")
+        self.otf_path = otf_path
+        self.fontforge_cache.generate(self.otf_path)
+        
+
+    def save_svg(self, svg_path):
+        print("Build SVG...")
+        self.svg_path = svg_path
+        self.fontforge_cache.generate(self.svg_path)
+        # Fix SVG header for webkit
+        # from: https://github.com/fontello/font-builder/blob/master/bin/fontconvert.py
+        svgfile = open(svg_path, 'r+')
+        svgtext = svgfile.read()
+        svgfile.seek(0)
+        svgfile.write(svgtext.replace('''<svg>''', '''<svg xmlns="http://www.w3.org/2000/svg">'''))
+        svgfile.close()
+
+    def save_eot(self, eot_path):
+        print("Build EOT...")
+        self.eot_path = eot_path
+        self.fontforge_cache.generate(self.eot_path)
+        
+
+    def save_woff(self, woff_path):
+        print("Build WOFF...")
+        self.woff_path = woff_path
+        self.fontforge_cache.generate(self.woff_path)
+        
+        
+    def optimize_glyphs(self, fontforge_obj):
+        print("+ Unlinking references...")
+        for glyph in fontforge_obj.glyphs():
+            glyph.unlinkRef()
+
+        print("+ Rounding points to int values...")
+        for glyph in fontforge_obj.glyphs():
+            glyph.round()
+
+        print("+ Removing overlaps...")
+        for glyph in fontforge_obj.glyphs():
+            # if glyph.unicode in self.char_map:
+            #     print("Working %s ..." % self.char_map[glyph.unicode])
+            # else:
+            #     print("Working unicode(%s) ..." % glyph.unicode)
+            glyph.removeOverlap()
+
+        print ("+ Adding extrema...")
+        for glyph in fontforge_obj.glyphs():
+            glyph.addExtrema()
+
+        print ("+ Simplifying...")
+        for glyph in fontforge_obj.glyphs():
+            glyph.simplify()
+
+        print ("+ Correcting directions...")
+        for glyph in fontforge_obj.glyphs():
+            glyph.correctDirection()
+
+
+try:
+    #~~~ Define options
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', help='Font name', nargs='*')
+    parser.add_argument('-p', help='Prefix name', nargs='*')
+
+    args = parser.parse_args()
+
+    FONT_NAME = 'fontico'
+    FONT_PREFIX = 'ico'
+
+    if not args.f == None:
+        FONT_NAME = args.f[0]
+
+    if not args.p == None:
+        FONT_PREFIX = args.p[0]
+
+    # Variables
+    THIS_PATH = os.path.dirname(os.path.abspath(__file__))
+    CWD_PATH = os.getcwd()
+
+    BUNDLES_DIR_PATH = os.path.join(CWD_PATH, 'bundles')
+    BUNDLE_DIR_PATH = os.path.join(BUNDLES_DIR_PATH, FONT_NAME)
+
+    SVG_DIR_PATH = os.path.join(BUNDLE_DIR_PATH, 'svg')
+
+    HTML_PATH = os.path.join(BUNDLE_DIR_PATH, FONT_NAME+'.html')
+
+    CSS_DIR_PATH = os.path.join(BUNDLE_DIR_PATH, 'css')
+    CSS_PATH = os.path.join(CSS_DIR_PATH, FONT_NAME+'.css')
+
+    FONT_DIR_PATH = os.path.join(BUNDLE_DIR_PATH, 'fonts')
+    FONT_TTF_PATH = os.path.join(FONT_DIR_PATH, FONT_NAME+'.ttf')
+    FONT_WOFF_PATH = os.path.join(FONT_DIR_PATH, FONT_NAME+'.woff')
+    FONT_OTF_PATH = os.path.join(FONT_DIR_PATH, FONT_NAME+'.otf')
+    FONT_SVG_PATH = os.path.join(FONT_DIR_PATH, FONT_NAME+'.svg')
+    FONT_EOT_PATH = os.path.join(FONT_DIR_PATH, FONT_NAME+'.eot')
+
+    # mkdirs
+    os.makedirs(BUNDLES_DIR_PATH, exist_ok=True)
+    os.makedirs(BUNDLE_DIR_PATH, exist_ok=True)
+    os.makedirs(SVG_DIR_PATH, exist_ok=True)
+    os.makedirs(CSS_DIR_PATH, exist_ok=True)
+    os.makedirs(FONT_DIR_PATH, exist_ok=True)
+
+    # Main
+    app = pywebfontkit(font_name=FONT_NAME)
+    app.load_svg_dir(SVG_DIR_PATH)
+    app.char_collect()
+    app.save_ttf(FONT_TTF_PATH)
+    app.save_woff(FONT_WOFF_PATH)
+    app.save_otf(FONT_OTF_PATH)
+    app.save_svg(FONT_SVG_PATH)
+    app.save_eot(FONT_EOT_PATH)
+    app.save_css(CSS_PATH, FONT_PREFIX, FONT_NAME)
+    app.save_html(HTML_PATH, FONT_PREFIX, FONT_NAME)
+
+except KeyboardInterrupt:
+    print('Force exit, Keyboard interrupt!')
