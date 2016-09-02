@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # pywebfontkit v0.1 
+# http://github.com/meyt/pywebfontkit
 # Author: Mahdi Ghane.G
 
 import sys

@@ -8,19 +8,18 @@ collect multiple SVG files and convert to `woff`, `ttf`, `svg`, `otf`, `eof`, an
 - fontforge
 - python 3 
  
-## Instructions
+## Instructions	
 
 - Download
 	
-		git clone $$$$
-		cd $$
+		git clone https://github.com/meyt/pywebfontkit.git
+		cd ./pywebfontkit
 		
-
 - Put svg files to your bundle path like this `./bundles/myfontname/svg`
 		
 - Build
 
-		python ./pywebfontkit.py  -f myfontname -p myprefix
+		python ./pywebfontkit  -f myfontname -p myprefix
 		
 
 
