@@ -14,12 +14,16 @@ collect multiple SVG files and convert to `woff`, `ttf`, `svg`, `otf`, `eof`, an
 	
 		git clone https://github.com/meyt/pywebfontkit.git
 		cd ./pywebfontkit
-		
+		sudo python ./setup.py install
+ or install from pypi
+ 
+ 		sudo pip install pywebfontkit
+ 		
 - Put svg files to your bundle path like this `./bundles/myfontname/svg`
 		
 - Build
 
-		python ./pywebfontkit  -f myfontname -p myprefix
+		pywebfontkit -f myfontname -p mycssprefix
 		
 
 
