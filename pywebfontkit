@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-import codecs
 import tempfile
 import argparse
 # noinspection PyUnresolvedReferences
@@ -13,8 +12,12 @@ except ImportError:
     import cgi as html
 
 if sys.version_info < (3, 0):
+    import codecs
     # noinspection PyUnresolvedReferences
+    # noinspection PyShadowingBuiltins
     chr = unichr
+    # noinspection PyShadowingBuiltins
+    open = codecs.open
 
 
 class PyWebFontKit:
@@ -42,6 +45,7 @@ class PyWebFontKit:
             if os.path.isfile(os.path.join(self.svg_dir, f)):
                 filename = os.path.splitext(f)[0]
                 self.svg_files.append(filename)
+        self.svg_files = sorted(self.svg_files)
 
     def char_add(self, svg_file, glyph_name):
         glyph = self.fontforge.createChar(self.char_index)
@@ -173,14 +177,14 @@ class PyWebFontKit:
         res = ''
 
         for x in self.char_map:
-            tmpres = template.replace("@classname@", glyph_prefix + '-' + self.char_map[x])
-            tmpres = tmpres.replace("@prefix@", glyph_prefix)
+            temp_res = template.replace("@classname@", glyph_prefix + '-' + self.char_map[x])
+            temp_res = temp_res.replace("@prefix@", glyph_prefix)
             char = chr(x)
-            htmlchar = ['&#%d;' % ord(x) for x in char][0]
-            htmlchar = html.escape(htmlchar)
-            tmpres = tmpres.replace("@char@", char)
-            tmpres = tmpres.replace("@htmlchar@", str(htmlchar))
-            res = res + tmpres
+            html_char = ['&#%d;' % ord(x) for x in char][0]
+            html_char = html.escape(html_char)
+            temp_res = temp_res.replace("@char@", char)
+            temp_res = temp_res.replace("@htmlchar@", str(html_char))
+            res = res + temp_res
         template_res = template_res.replace("@content@", res)
         res = template_res.replace("@fontname@", font_name)
         file = codecs.open(html_path, encoding='utf-8', mode="w")
@@ -244,7 +248,7 @@ class PyWebFontKit:
 
     @staticmethod
     def optimize_glyphs(fontforge_obj):
-        print("+ Unlinking references...")
+        print("+ Unlink references...")
         for glyph in fontforge_obj.glyphs():
             glyph.unlinkRef()
 
