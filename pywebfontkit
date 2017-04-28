@@ -26,7 +26,7 @@ class PyWebFontKit:
         self.svg_files = []
         self.ttf_path = ''
         self.char_map = {}
-        self.char_index = 350
+        self.char_index = 0xf100
         self.fontforge = fontforge.font()
         self.fontforge.encoding = 'UnicodeFull'
         self.fontforge.design_size = 16
@@ -48,7 +48,7 @@ class PyWebFontKit:
         self.svg_files = sorted(self.svg_files)
 
     def char_add(self, svg_file, glyph_name):
-        glyph = self.fontforge.createChar(self.char_index)
+        glyph = self.fontforge.createChar(int('0x%x' % self.char_index, 16))
 
         # hack removal of <switch> </switch> tags
         svgfile = open(svg_file, 'r+')
