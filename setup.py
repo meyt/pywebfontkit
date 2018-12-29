@@ -1,15 +1,17 @@
 from setuptools import setup
-readme = open('README.rst').read()
 
-setup(name='pywebfontkit',
-      version='0.2.0',
-      description='a simple python based font bundle generator for web.',
-      url='http://github.com/meyt/pywebfontkit',
-      long_description=readme,
-      author='Mahdi Ghane.g',
-      license='GPLv3',
-      keywords='pywebfontkit svg woff ttf fontforge otf eot css html webfont webfontgenerator',
-      classifiers=[
+
+setup(
+    name='pywebfontkit',
+    version='0.3.0',
+    description='a simple python based font bundle generator for web.',
+    url='http://github.com/meyt/pywebfontkit',
+    long_description=open('README.rst').read(),
+    author='Mahdi Ghane.g',
+    license='GPLv3',
+    keywords='pywebfontkit svg woff ttf fontforge otf eot '
+             'css html webfont webfontgenerator',
+    classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Developers',
@@ -20,6 +22,11 @@ setup(name='pywebfontkit',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Topic :: Software Development :: Build Tools'
-      ],
-      scripts=['pywebfontkit'],
-      zip_safe=False)
+    ],
+    entry_points={
+        'console_scripts': [
+            'pywebfontkit = pywebfontkit.main'
+        ]
+    },
+    zip_safe=False
+)
