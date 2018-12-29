@@ -36,8 +36,16 @@ Or install from pypi
 
 ..  code-block:: bash
 
-		pywebfontkit -f myfontname -p mycssprefix
+		pywebfontkit -f myfontname
 		
+Or
+
+Run through fontforge
+
+..  code-block:: bash
+
+		fontforge -lang=py -script pywebfontkit.py -f myfontname
+
 
 P.S: On some distribution like Ubuntu, doesn't work with python3,
 so install ``python-fontforge`` and run it under python2.
