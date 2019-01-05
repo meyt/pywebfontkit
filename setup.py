@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='pywebfontkit',
-    version='0.3.0',
+    version='0.4.0',
     description='a simple python based font bundle generator for web.',
     url='http://github.com/meyt/pywebfontkit',
     long_description=open('README.rst').read(),
