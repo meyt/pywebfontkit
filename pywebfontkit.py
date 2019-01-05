@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-# noinspection PyUnresolvedReferences
-import fontforge
 import argparse
 
 from tempfile import NamedTemporaryFile
@@ -14,6 +12,26 @@ try:
     import html
 except ImportError:
     import cgi as html
+
+# Define options
+parser = argparse.ArgumentParser()
+parser.add_argument('-f', help='Font name', nargs='*')
+
+args = parser.parse_args()
+if args.f is None:
+    parser.print_help()
+font_name_ = args.f[0]
+
+try:
+    # noinspection PyUnresolvedReferences
+    import fontforge
+except ImportError:
+    from subprocess import call
+    call('fontforge -lang=py -script %s -f %s' % (
+        join(os.getcwd(), 'pywebfontkit.py'),
+        font_name_
+    ), shell=True)
+    exit(0)
 
 if sys.version_info < (3, 0):
     import codecs
@@ -385,20 +403,7 @@ class PyWebFontKit:
             print('Force exit, Keyboard interrupt!')
 
 
-def main():
-    # Define options
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-f', help='Font name', nargs='*')
-
-    args = parser.parse_args()
-    if args.f is not None:
-        PyWebFontKit.main(
-            font_name=args.f[0],
-            working_dir=os.getcwd()
-        )
-    else:
-        parser.print_help()
-
-
-if __name__ == '__main__':
-    main()
+PyWebFontKit.main(
+    font_name=font_name_,
+    working_dir=os.getcwd()
+)
